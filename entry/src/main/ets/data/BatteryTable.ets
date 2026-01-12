@@ -6,7 +6,10 @@ export default class BatteryTable {
   private static store: relationalStore.RdbStore | null = null;
 
   private static getStore(context: Context, cb: () => void) {
-    if (BatteryTable.store) { cb(); return; }
+    if (BatteryTable.store) { 
+      cb(); 
+      return; 
+    }
     relationalStore.getRdbStore(
       context,
       CommonConstantsDb.STORE_CONFIG,
@@ -16,7 +19,7 @@ export default class BatteryTable {
           return;
         }
         BatteryTable.store = store;
-        BatteryTable.store.executeSql(CommonConstantsDb.Battery_Table.sqlCreate);
+        BatteryTable.store.executeSql(CommonConstantsDb.BATTERY_TABLE.sqlCreate);
         cb();
       }
     );
@@ -25,13 +28,14 @@ export default class BatteryTable {
   static insertMeasurement(context: Context, rec: BatteryRecord, cb: (ok: boolean) => void) {
     BatteryTable.getStore(context, () => {
       if (!BatteryTable.store) {
-        return cb(false);
+        cb(false);
+        return;
       }
       const values: relationalStore.ValuesBucket = {
         ts: rec.ts,
         batteryPct: rec.batteryPct
       };
-      BatteryTable.store!.insert(CommonConstantsDb.Battery_Table.tableName, values, (err, rowId) => {
+      BatteryTable.store!.insert(CommonConstantsDb.BATTERY_TABLE.tableName, values, (err, rowId) => {
         if (err) {
           console.error('[RDB] insert fail', JSON.stringify(err));
           cb(false);
@@ -46,11 +50,15 @@ export default class BatteryTable {
   static getAll(context: Context, cb: (rows: BatteryRecord[]) => void) {
     BatteryTable.getStore(context, () => {
       if (!BatteryTable.store) {
-        return cb([]);
+        cb([]);
+        return;
       }
-      const p = new relationalStore.RdbPredicates(CommonConstantsDb.Battery_Table.tableName);
+      const p = new relationalStore.RdbPredicates(CommonConstantsDb.BATTERY_TABLE.tableName);
       BatteryTable.store!.query(p, [], (err, rs) => {
-        if (err || !rs) { cb([]); return; }
+        if (err || !rs) { 
+          cb([]); 
+          return; 
+        }
         const out: BatteryRecord[] = [];
         rs.goToFirstRow();
         for (let i = 0; i < rs.rowCount; i++) {

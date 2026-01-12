@@ -67,4 +67,4 @@ entry/
 
 # License
 **Battery Monitor Wearable** is distributed under the terms of the MIT License  
-See the [LICENSE](./LICENSE) for more information.
+See the [LICENSE](LICENSE) for more information.

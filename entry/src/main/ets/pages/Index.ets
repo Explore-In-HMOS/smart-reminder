@@ -7,7 +7,6 @@ import ConstantUI from '../util/ConstantUI'
 import BatteryTable from '../data/BatteryTable'
 import BatteryRecord from '../model/BatteryRecord'
 
-
 const BG = '#0B0F14'
 const TEXT = '#E6EEF7'
 const SUB = '#9BB0C3'
@@ -15,27 +14,28 @@ const SUB = '#9BB0C3'
 @Entry
 @Component
 struct Index {
-  @State message: string = 'Monitoring\nfor crash...'
-  @State crashDetected: boolean = false
+  message: string = 'Monitoring\nfor crash...'
   @State isRunning: boolean = false
   @State batteryPct: number = -1
-  @Consume('NavPathStack') pageStack: NavPathStack
+  @Provide('NavPathStack') pageStack: NavPathStack = new NavPathStack()
 
-  private context: common.UIAbilityContext = getContext(this) as common.UIAbilityContext
-  private pollTimer?: number
+  private context?: common.UIAbilityContext = undefined
+  private pollTimer?: number = undefined
   private lastNotifyBucket: 'LOW' | 'MID' | 'OK' | null = null
   private readonly NOTIF_ID: number = 7001
-
-
   private scroller: Scroller = new Scroller()
 
   private async startContinuousTask(): Promise<void> {
+    if (!this.context) {
+      return
+    }
+
     const info: wantAgent.WantAgentInfo = {
       wants: [{
         bundleName: this.context.abilityInfo.bundleName,
         abilityName: this.context.abilityInfo.name
       }],
-      operationType: wantAgent.OperationType.START_ABILITY,
+      actionType: wantAgent.OperationType.START_ABILITY,
       requestCode: 0,
       wantAgentFlags: [wantAgent.WantAgentFlags.UPDATE_PRESENT_FLAG]
     }
@@ -58,6 +58,10 @@ struct Index {
   }
 
   private async stopContinuousTask(): Promise<void> {
+    if (!this.context) {
+      return
+    }
+
     try {
       await backgroundTaskManager.stopBackgroundRunning(this.context)
       console.info('Background task stopped')
@@ -69,7 +73,6 @@ struct Index {
       try {
         sensor.off(sensor.SensorId.ACCELEROMETER)
       } catch (err2) {
-        console.error('Sensor off error: ' + JSON.stringify(err2))
       }
     }
   }
@@ -82,9 +85,16 @@ struct Index {
 
       let bucket: 'LOW' | 'MID' | 'OK'
       let label: string
-      if (soc <= 15) { bucket = 'LOW'; label = 'Low battery' }
-      else if (soc <= 40) { bucket = 'MID'; label = 'Consider charging soon' }
-      else { bucket = 'OK'; label = 'Battery OK' }
+      if (soc <= 15) {
+        bucket = 'LOW'
+        label = 'Low battery'
+      } else if (soc <= 40) {
+        bucket = 'MID'
+        label = 'Consider charging soon'
+      } else {
+        bucket = 'OK'
+        label = 'Battery OK'
+      }
 
       if (bucket !== this.lastNotifyBucket) {
         this.lastNotifyBucket = bucket
@@ -93,7 +103,6 @@ struct Index {
         }
       }
     } catch (e) {
-      console.error('[BAT] read error: ' + JSON.stringify(e))
     }
   }
 
@@ -113,7 +122,6 @@ struct Index {
     try {
       await notificationManager.addSlot(notificationManager.SlotType.SERVICE_INFORMATION)
     } catch (e) {
-      console.warn('[NOTIF] addSlot warn: ' + JSON.stringify(e))
     }
   }
 
@@ -136,23 +144,26 @@ struct Index {
       await notificationManager.publish(req)
       console.info('[NOTIF] published')
     } catch (e) {
-      console.error('[NOTIF] publish error: ' + JSON.stringify(e))
     }
   }
 
   aboutToAppear(): void {
+    this.context = this.getUIContext().getHostContext() as common.UIAbilityContext
+
+    if (!this.context) {
+      return
+    }
+
     const cb = (err: BusinessError): void => {
       if (err) {
-        console.error('[ANS] requestEnableNotification failed:', err.code, err.message)
       } else {
-        console.info('[ANS] requestEnableNotification success')
       }
     }
     notificationManager.requestEnableNotification(this.context, cb)
   }
 
   private saveCurrentBattery(): void {
-    if (this.batteryPct < 0) {
+    if (this.batteryPct < 0 || !this.context) {
       return
     }
     const rec: BatteryRecord = {
@@ -162,8 +173,7 @@ struct Index {
     BatteryTable.insertMeasurement(this.context, rec, (ok) => {
       if (ok) {
         console.info(`Saved: ${rec.ts} • ${rec.batteryPct}%`)
-      }
-      else {
+      } else {
         console.error('Save failed')
       }
     })
@@ -189,14 +199,12 @@ struct Index {
             .fontColor(SUB)
             .textAlign(TextAlign.Center)
 
-
           Button(this.isRunning ? 'Stop & Exit Background' : 'Start Background & Measure')
             .type(ButtonType.Capsule)
             .onClick(async () => {
               if (this.isRunning) {
                 await this.stopContinuousTask()
-              }
-              else {
+              } else {
                 await this.startContinuousTask()
               }
             })
@@ -228,7 +236,7 @@ struct Index {
             .textAlign(TextAlign.Center)
             .margin({ top: 6, bottom: 8 })
         }
-        .width('100%')
+        .width(ConstantUI.FULL_WIDTH)
         .alignItems(HorizontalAlign.Center)
         .padding({ left: 10, right: 10 })
       }

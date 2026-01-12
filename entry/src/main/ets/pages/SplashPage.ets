@@ -10,7 +10,7 @@ export struct SplashPage {
 
   aboutToAppear() {
     setTimeout(() => {
-      this.pageStack.replacePathByName('Index',null)
+      this.pageStack.replacePathByName('Index', null)
     }, ConstantUI.SPLASH_DELAY_MS)
   }
 

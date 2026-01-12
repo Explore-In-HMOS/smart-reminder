@@ -4,7 +4,7 @@
     "type": "entry",
     "description": "$string:module_desc",
     "mainElement": "EntryAbility",
-    "deviceTypes": ["phone","wearable"],
+    "deviceTypes": ["wearable"],
     "deliveryWithInstall": true,
     "installationFree": false,
     "pages": "$profile:main_pages",
